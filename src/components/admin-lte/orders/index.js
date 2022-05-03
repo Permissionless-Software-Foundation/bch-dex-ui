@@ -9,6 +9,7 @@ const axios = require('axios').default
 const siteConfig = require('../../site-config')
 
 const SERVER = siteConfig.bchDexUrl
+const BchWallet = typeof window !== 'undefined' ? window.SlpWallet : null
 
 // const EXPLORER_URL = 'https://explorer.bitcoin.com/bch/tx/'
 
@@ -25,6 +26,8 @@ class Orders extends React.Component {
       showTakeModal: false,
       takeInput: ''
     }
+
+    _this.BchWallet = BchWallet
 
     this.firstColumns = [
       { title: 'Ticker', data: 'ticker' },
@@ -146,6 +149,7 @@ class Orders extends React.Component {
   }
 
   async componentDidMount () {
+    await _this.handleCreateWallet()
     _this.handleOrders()
 
     // Get data and update the table
@@ -316,6 +320,70 @@ class Orders extends React.Component {
     _this.setState({
       [event.target.name]: value
     })
+  }
+
+  async handleCreateWallet () {
+    try {
+      const currentWallet = _this.props.walletInfo
+
+      if (currentWallet.mnemonic) {
+        console.warn('Wallet already exists')
+        return
+      }
+
+      // const apiToken = currentWallet.JWT
+      // const restURL = currentWallet.selectedServer
+      // const bchjsOptions = {}
+      //
+      // if (apiToken || restURL) {
+      //   if (apiToken) {
+      //     bchjsOptions.apiToken = apiToken
+      //   }
+      //   if (restURL) {
+      //     bchjsOptions.restURL = restURL
+      //   }
+      // }
+      //
+      // const bchWalletLib = new _this.BchWallet(null, bchjsOptions)
+
+      const bchjsOptions = {
+        interface: 'consumer-api'
+      }
+
+      const bchWalletLib = new _this.BchWallet(null, bchjsOptions)
+
+      // Update bchjs instances  of minimal-slp-wallet libraries
+      // bchWalletLib.tokens.sendBch.bchjs = new bchWalletLib.BCHJS(bchjsOptions)
+      // bchWalletLib.tokens.utxos.bchjs = new bchWalletLib.BCHJS(bchjsOptions)
+
+      await bchWalletLib.walletInfoPromise // Wait for wallet to be created.
+
+      const walletInfo = bchWalletLib.walletInfo
+      walletInfo.from = 'created'
+
+      Object.assign(currentWallet, walletInfo)
+
+      const myBalance = await bchWalletLib.getBalance()
+
+      const bchjs = bchWalletLib.bchjs
+
+      let currentRate
+
+      if (bchjs.restURL.includes('abc.fullstack')) {
+        currentRate = await bchjs.Price.getBchaUsd() * 100
+      } else {
+        // BCHN price.
+        currentRate = (await bchjs.Price.getUsd()) * 100
+      }
+
+      // console.log("myBalance", myBalance)
+      // Update redux state
+      _this.props.setWalletInfo(currentWallet)
+      _this.props.updateBalance({ myBalance, currentRate })
+      _this.props.setBchWallet(bchWalletLib)
+    } catch (error) {
+      console.error(error)
+    }
   }
 }
 
