@@ -45,5 +45,6 @@ const config = {
 //   }
 // }
 config.bchDexUrl = 'https://dex-api.fullstack.cash'
+// config.bchDexUrl = 'http://192.168.2.180:5700'
 
 module.exports = config

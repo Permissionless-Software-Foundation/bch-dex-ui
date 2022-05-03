@@ -280,6 +280,8 @@ class Orders extends React.Component {
   }
 
   async handleTake (order) {
+    return
+    
     console.log('handleTake() order: ', order)
 
     const offerCid = order.data.p2wdbHash
